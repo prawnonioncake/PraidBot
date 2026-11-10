@@ -1,32 +1,45 @@
+const IMVU = require('imvu.js');
 const { GoogleGenAI } = require('@google/genai');
 
-// Çevre değişkenlerini Render üzerinden güvenli bir şekilde okuyoruz
+// Google AI istemcisini başlatma
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const imvuUser = process.env.IMVU_USERNAME;
-const imvuPass = process.env.IMVU_PASSWORD;
 
-async function generateAIResponse(userMessage) {
-  try {
-    // Gemini 2.5 Flash modeli hızlı ve botlar için idealdir
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `Sen bir IMVU sohbet botusun. Gelen şu mesaja kısa ve samimi bir yanıt ver: ${userMessage}`,
-    });
-    return response.text;
-  } catch (error) {
-    console.error("Gemini Hatası:", error);
-    return "Şu an kafam biraz karışık, daha sonra tekrar dener misin?";
-  }
-}
+const bot = new IMVU({
+    username: process.env.IMVU_USERNAME,
+    password: process.env.IMVU_PASSWORD
+});
 
-// IMVU Bot Bağlantı Mantığı (Kullandığınız kütüphaneye göre uyarlayın)
-async function startIMVUBot() {
-  console.log(`${imvuUser} kullanıcısı ile IMVU'ya bağlanılıyor...`);
-  
-  // ÖRNEK DÖNGÜ: IMVU'dan gelen mesajları dinlediğiniz yer
-  // const reply = await generateAIResponse(gelen_imvu_mesaji);
-  // imvu.sendMessage(reply);
-}
+bot.on('ready', () => {
+    console.log(`Bot ${bot.display_name} aktif! Her mesaja otomatik cevap sistemi devrede.`);
+});
 
-startIMVUBot();
+// Odadaki her mesajı dinleyen fonksiyon
+bot.on('message', async (room, user, message) => {
+    // 1. GÜVENLİK FİLTRESİ: Bot kendi yazdığı mesaja cevap VERMEMELİ (Sonsuz döngü engeli)
+    if (user.id === bot.id) return;
+
+    // 2. FİLTRE: Eğer mesaj boşsa veya sadece boşluklardan oluşuyorsa işlem yapma
+    const userMessage = message.trim();
+    if (!userMessage) return;
+
+    try {
+        // Gemini modeline mesajı gönderiyoruz
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash', // En hızlı ve akıcı model
+            contents: `Sen bir IMVU 3D sohbet odası botusun. Odadaki kullanıcıların mesajlarına otomatik, kısa, samimi, eğlenceli ve akıcı Türkçe cevaplar ver. Uzun paragraflar yazma, sohbeti canlı tut. 
+            Konuşan Kullanıcı: ${user.display_name}
+            Kullanıcının Mesajı: ${userMessage}`,
+        });
+
+        // Gelen yapay zeka cevabını odaya gönderiyoruz
+        if (response.text) {
+            bot.say(response.text.trim());
+        }
+    } catch (error) {
+        console.error("Google API Hatası:", error);
+    }
+});
+
+bot.login();
+
 
