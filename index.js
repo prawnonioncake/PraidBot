@@ -1,14 +1,32 @@
-const { Client, GatewayIntentBits } = require('discord.js');
-const client = new Client{ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+const { GoogleGenAI } = require('@google/genai');
 
-client.once('ready', () => {
-    console.log(`${client.user.tag} aktif!`);
-});
+// Çevre değişkenlerini Render üzerinden güvenli bir şekilde okuyoruz
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const imvuUser = process.env.IMVU_USERNAME;
+const imvuPass = process.env.IMVU_PASSWORD;
 
-client.on('messageCreate', async (message) => {
-    if (message.content === '!imvu') {
-        message.reply('IMVU Botu aktif ve komut bekliyor!);
-   }
-});
+async function generateAIResponse(userMessage) {
+  try {
+    // Gemini 2.5 Flash modeli hızlı ve botlar için idealdir
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Sen bir IMVU sohbet botusun. Gelen şu mesaja kısa ve samimi bir yanıt ver: ${userMessage}`,
+    });
+    return response.text;
+  } catch (error) {
+    console.error("Gemini Hatası:", error);
+    return "Şu an kafam biraz karışık, daha sonra tekrar dener misin?";
+  }
+}
 
-client.login(process.env.TOKEN);
+// IMVU Bot Bağlantı Mantığı (Kullandığınız kütüphaneye göre uyarlayın)
+async function startIMVUBot() {
+  console.log(`${imvuUser} kullanıcısı ile IMVU'ya bağlanılıyor...`);
+  
+  // ÖRNEK DÖNGÜ: IMVU'dan gelen mesajları dinlediğiniz yer
+  // const reply = await generateAIResponse(gelen_imvu_mesaji);
+  // imvu.sendMessage(reply);
+}
+
+startIMVUBot();
+
